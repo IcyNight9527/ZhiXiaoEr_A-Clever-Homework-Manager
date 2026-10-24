@@ -29,14 +29,29 @@
    学委在电脑端点击打包，系统会将全班作业压缩为 zip 文件，直接转发给老师。
 
 ## 应用截图
-<img width="921" height="751" alt="e5f437798cc90dd573d2b49d5b701304" src="https://github.com/user-attachments/assets/fdcc215d-0880-4bcd-94f7-3e4b38b83573" />
-主页面
-<img width="936" height="1230" alt="afc5d1cc5fa1ace670c9af678432eec4" src="https://github.com/user-attachments/assets/e5d01b34-8cdb-44b1-95b0-73c023b022c8" />
-群组内部页面
-<img width="840" height="1244" alt="cd58d932ca2e4d182d8a6c89dbd7cf28" src="https://github.com/user-attachments/assets/6674b5f1-8497-40ad-821b-fe89afcefbb9" />
-作业布置页面
-<img width="971" height="762" alt="bfb4448ba3ff97abffb4648da42a5f82" src="https://github.com/user-attachments/assets/05765720-b358-41db-ab52-1b7d0f95bbc3" />
-提交统计页面
+### 应用截图
+<div align="center">
+  <img width="60%" alt="主页面" src="https://github.com/user-attachments/assets/fdcc215d-0880-4bcd-94f7-3e4b38b83573" />
+  <br/><em>主页面与待办展示</em>
+</div>
+<br/>
+
+<div align="center">
+  <img width="60%" alt="群组内部页面" src="https://github.com/user-attachments/assets/e5d01b34-8cdb-44b1-95b0-73c023b022c8" />
+  <br/><em>群组内部页面</em>
+</div>
+<br/>
+
+<div align="center">
+  <img width="60%" alt="作业布置页面" src="https://github.com/user-attachments/assets/6674b5f1-8497-40ad-821b-fe89afcefbb9" />
+  <br/><em>作业布置与规则配置</em>
+</div>
+<br/>
+
+<div align="center">
+  <img width="60%" alt="提交统计页面" src="https://github.com/user-attachments/assets/05765720-b358-41db-ab52-1b7d0f95bbc3" />
+  <br/><em>提交统计与一键打包</em>
+</div>
 
 ## 数据与隐私
 
