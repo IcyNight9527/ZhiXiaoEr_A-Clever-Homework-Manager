@@ -29,7 +29,6 @@
    学委在电脑端点击打包，系统会将全班作业压缩为 zip 文件，直接转发给老师。
 
 ## 应用截图
-### 应用截图
 <div align="center">
   <img width="60%" alt="主页面" src="https://github.com/user-attachments/assets/fdcc215d-0880-4bcd-94f7-3e4b38b83573" />
   <br/><em>主页面与待办展示</em>
