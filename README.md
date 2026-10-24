@@ -1,5 +1,6 @@
-<img width="60%" height="345" alt="18af277353c3480533320c92afd87076" src="https://github.com/user-attachments/assets/22a22577-af38-442c-af3d-3cec5566dad3" />
-
+<div align="center">
+  <img width="60%" alt="智小二宣传图" src="https://github.com/user-attachments/assets/22a22577-af38-442c-af3d-3cec5566dad3" />
+</div>
 # 智小二——收集·打包·重命名一体化作业收集方案
 
 **收集，打包，重命名。让收作业变得不再繁琐。**
