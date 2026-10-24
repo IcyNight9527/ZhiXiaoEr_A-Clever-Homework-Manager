@@ -6,7 +6,7 @@
 
 			<view class="info-line">
 				<view class="label">与开发者联系：</view>
-				<view class="value">QQ 99461359</view>
+				<view class="value">QQ 410936697</view>
 			</view>
 
 			<view class="info-line">
