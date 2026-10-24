@@ -1,0 +1,17 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "code", "success", "created_at"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "user_id": { "bsonType": "string", "description": "用户ID" },
+    "code": { "bsonType": "string", "description": "尝试的邀请码" },
+    "success": { "bsonType": "bool", "description": "是否成功" },
+    "created_at": { "bsonType": "timestamp", "description": "尝试时间" }
+  }
+}

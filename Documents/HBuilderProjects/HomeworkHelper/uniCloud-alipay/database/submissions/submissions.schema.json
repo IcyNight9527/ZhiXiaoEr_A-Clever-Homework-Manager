@@ -1,0 +1,21 @@
+{
+  "bsonType": "object",
+  "required": ["homework_id", "student_id", "file_url", "group_id"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "homework_id": { "bsonType": "string", "description": "关联的作业ID" },
+    "student_id": { "bsonType": "string", "description": "关联的学生ID/学号" },
+    "file_url": { "bsonType": "string", "description": "云存储文件路径" },
+    "original_name": { "bsonType": "string", "description": "上传时的原始文件名" },
+    "renamed_file": { "bsonType": "string", "description": "重命名后的文件" },
+    "submit_time": { "bsonType": "timestamp", "description": "提交时间" },
+    "status": { "bsonType": "string", "description": "状态：success/returned" },
+	"group_id": { "bsonType": "string", "description": "所属群组的_id" }
+  }
+}

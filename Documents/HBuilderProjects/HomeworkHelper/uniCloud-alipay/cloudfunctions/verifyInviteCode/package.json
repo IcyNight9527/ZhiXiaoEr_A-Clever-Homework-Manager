@@ -1,0 +1,7 @@
+{
+  "name": "verifyInviteCode",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

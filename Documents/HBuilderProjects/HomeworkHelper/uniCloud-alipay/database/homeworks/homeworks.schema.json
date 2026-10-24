@@ -1,0 +1,25 @@
+{
+  "bsonType": "object",
+  "required": ["subject", "title", "desc", "deadline", "group_id"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "subject": { "bsonType": "string", "description": "科目名称" },
+    "title": { "bsonType": "string", "description": "作业标题" },
+    "desc": { "bsonType": "string", "description": "作业要求" },
+    "allowed_ext": { "bsonType": "array", "description": "允许的文件格式" },
+    "deadline": { "bsonType": "timestamp", "description": "截止时间戳" },
+    "created_at": { "bsonType": "timestamp", "description": "创建时间" },
+	"group_id": { "bsonType": "string", "description": "所属群组的_id" },
+	"rename_rule": { "bsonType": "string", "description": "重命名规则：id_name / name_id / keep" },
+	"need_submit": { "bsonType": "bool", "description": "是否需要提交作业" },
+	"images": { "bsonType": "array", "description": "作业图片（最多5张）" },
+	"file_url": { "bsonType": "string", "description": "作业文件路径" },
+	"file_name": { "bsonType": "string", "description": "作业文件原始名" }
+  }
+}

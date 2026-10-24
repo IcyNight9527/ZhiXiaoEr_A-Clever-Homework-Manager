@@ -1,0 +1,17 @@
+{
+  "bsonType": "object",
+  "required": ["content", "group_id"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "homework_id": { "bsonType": "string", "description": "关联的作业ID，可选" },
+    "content": { "bsonType": "string", "description": "通知内容" },
+    "created_at": { "bsonType": "timestamp", "description": "发布时间" },
+	"group_id": { "bsonType": "string", "description": "所属群组的_id" }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "getAllFileUrls",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

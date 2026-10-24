@@ -1,0 +1,7 @@
+{
+  "name": "leaveGroup",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

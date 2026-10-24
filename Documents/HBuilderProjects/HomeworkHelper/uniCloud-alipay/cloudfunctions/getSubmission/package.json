@@ -1,0 +1,7 @@
+{
+  "name": "getSubmission",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

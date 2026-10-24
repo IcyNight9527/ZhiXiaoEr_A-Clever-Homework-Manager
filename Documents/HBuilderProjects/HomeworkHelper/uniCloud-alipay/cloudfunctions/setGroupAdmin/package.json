@@ -1,0 +1,7 @@
+{
+  "name": "setGroupAdmin",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

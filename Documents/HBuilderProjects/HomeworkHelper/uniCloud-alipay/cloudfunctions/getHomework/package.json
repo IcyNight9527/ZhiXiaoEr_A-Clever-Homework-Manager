@@ -1,0 +1,7 @@
+{
+  "name": "getHomework",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}
