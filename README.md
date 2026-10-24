@@ -11,7 +11,7 @@
 
 ## 下载与开始使用
 
-- **H5 网页端**：点击此处访问env-00jy6t6g3q4l-static.normal.cloudstatic.cn，无需安装，点击即可体验。
+- **H5 网页端**：[点击此处访问](https://env-00jy6t6g3q4l-static.normal.cloudstatic.cn)，无需安装，即点即用。
 - **Android 手机端**：在 GitHub Releases 页面下载最新版本的 `.apk` 文件（目前仅支持安卓端）。
 - **管理员/学委**：请在电脑端登录 H5 网页，体验完整的一键打包功能。
 
