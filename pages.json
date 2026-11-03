@@ -1,0 +1,94 @@
+{
+	"pages": [
+		{
+			"path": "pages/login/login",
+			"style": {
+				"navigationBarTitleText": "智小二",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/home/home",
+			"style": {
+				"navigationBarTitleText": "群组"
+			}
+		},
+		{
+			"path": "pages/group/group",
+			"style": {
+				"navigationBarTitleText": "群组详情"
+			}
+		},
+		{
+			"path": "pages/group/create",
+			"style": {
+				"navigationBarTitleText": "创建群组"
+			}
+		},
+		{
+			"path": "pages/submit/submit",
+			"style": {
+				"navigationBarTitleText": "提交作业"
+			}
+		},
+		{
+		    "path": "pages/group/members",
+		    "style": { "navigationBarTitleText": "成员管理" }
+		},
+		{
+			"path": "pages/my/my",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
+		},
+		{
+		    "path": "pages/my/about",
+		    "style": {
+		        "navigationBarTitleText": "关于"
+		    }
+		},
+		{
+		    "path": "pages/admin/add_homework",
+		    "style": { "navigationBarTitleText": "发布作业" }
+		},
+		{
+		    "path": "pages/admin/add_notification",
+		    "style": { "navigationBarTitleText": "发通知" }
+		},
+		{
+		    "path": "pages/admin/submissions",
+		    "style": { "navigationBarTitleText": "提交情况" }
+		},
+		{
+		    "path": "pages/admin/edit_homework",
+		    "style": { "navigationBarTitleText": "编辑作业" }
+		},
+		{
+		    "path": "pages/tutorial/tutorial",
+		    "style": { "navigationBarTitleText": "功能介绍" }
+		}
+	],
+	"tabBar": {
+		"color": "#999",
+		"selectedColor": "#007aff",
+		"backgroundColor": "#ffffff",
+		"fontSize": "16px",
+		"list": [
+			{
+				"pagePath": "pages/home/home",
+				"text": "群组"
+			},
+			{
+				"pagePath": "pages/my/my",
+				"text": "我的"
+			}
+		]
+	},
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8"
+	},
+	"uniIdRouter": {}
+}

@@ -1,0 +1,7 @@
+{
+  "name": "createGroup",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

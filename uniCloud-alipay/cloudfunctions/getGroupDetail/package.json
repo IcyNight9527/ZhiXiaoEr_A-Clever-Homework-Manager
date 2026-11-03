@@ -1,0 +1,7 @@
+{
+  "name": "getGroupDetail",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

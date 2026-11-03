@@ -1,0 +1,7 @@
+{
+  "name": "deleteNotification",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

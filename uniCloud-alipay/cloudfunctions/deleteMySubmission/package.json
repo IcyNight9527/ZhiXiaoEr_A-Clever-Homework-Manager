@@ -1,0 +1,7 @@
+{
+  "name": "deleteMySubmission",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

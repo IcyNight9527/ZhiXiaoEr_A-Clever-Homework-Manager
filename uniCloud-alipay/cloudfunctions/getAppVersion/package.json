@@ -1,0 +1,7 @@
+{
+  "name": "getAppVersion",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

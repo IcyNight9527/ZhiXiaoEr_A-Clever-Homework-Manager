@@ -1,0 +1,19 @@
+{
+  "bsonType": "object",
+  "required": ["name", "group_code", "admin_id", "group_password", "admin_in_group"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "name": { "bsonType": "string", "description": "群组名称，如：数据库原理" },
+    "group_code": { "bsonType": "string", "description": "4位数字群组号" },
+    "admin_id": { "bsonType": "string", "description": "创建者的学号/工号" },
+    "admin_in_group": { "bsonType": "bool", "description": "管理员是否加入统计范围（学委选true，老师选false）" },
+    "created_at": { "bsonType": "timestamp", "description": "创建时间" },
+	"group_password": { "bsonType": "string", "description": "群组密码（6位数字）" }
+  }
+}

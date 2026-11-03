@@ -1,0 +1,16 @@
+{
+  "bsonType": "object",
+  "required": ["latest_version", "download_url"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": { "description": "ID，系统自动生成" },
+    "latest_version": { "bsonType": "string", "description": "最新版本号，如 1.3.2" },
+    "download_url": { "bsonType": "string", "description": "下载地址" },
+    "update_log": { "bsonType": "string", "description": "更新日志内容" }
+  }
+}

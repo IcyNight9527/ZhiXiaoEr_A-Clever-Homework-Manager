@@ -1,0 +1,7 @@
+{
+  "name": "checkDemoPassword",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

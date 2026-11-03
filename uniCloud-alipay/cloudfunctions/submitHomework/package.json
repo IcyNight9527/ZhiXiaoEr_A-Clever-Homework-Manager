@@ -1,0 +1,7 @@
+{
+  "name": "submitHomework",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}
