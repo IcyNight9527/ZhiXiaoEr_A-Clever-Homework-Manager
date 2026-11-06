@@ -2,10 +2,10 @@
   "bsonType": "object",
   "required": ["homework_id", "student_id", "file_url", "group_id"],
   "permission": {
-    "read": true,
-    "create": true,
-    "update": true,
-    "delete": true
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
   },
   "properties": {
     "_id": { "description": "ID，系统自动生成" },

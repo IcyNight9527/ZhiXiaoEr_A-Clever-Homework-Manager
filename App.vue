@@ -1,133 +1,238 @@
 <script>
 	export default {
-		onLaunch: function() {
-			console.log('App Launch')
-
+		onLaunch() {
 			// #ifdef APP-PLUS
-			this.checkAppUpdate()
-			this.showUpdateLog()
+			this.initializeApp()
 			// #endif
 		},
-		onShow: function() {
+
+		onShow() {
 			console.log('App Show')
 		},
-		onHide: function() {
+
+		onHide() {
 			console.log('App Hide')
 		},
+
 		methods: {
-			async checkAppUpdate() {
+			async initializeApp() {
 				try {
-					// 1. 请求云函数获取最新版本信息
 					const res = await uniCloud.callFunction({
 						name: 'getAppVersion'
 					})
 
-					if (res.result.code === 200) {
-						const config = res.result.data
-						const latestVersion = config.latest_version
-						const downloadUrl = config.download_url
+					const result = res.result || {}
 
-						// 2. 获取当前手机App的版本号
-						const currentVersion = plus.runtime.version
-
-						// 3. 比较版本号
-						if (latestVersion !== currentVersion) {
-							// 发现新版本，弹窗提示
-							uni.showModal({
-								title: '发现新版本',
-								content: `最新版本 v${latestVersion} 已发布，是否立即更新？`,
-								confirmText: '立即更新',
-								success: (modalRes) => {
-									if (modalRes.confirm) {
-										this.downloadAndInstall(downloadUrl)
-									}
-								}
-							})
-						}
+					if (result.code !== 200 || !result.data) {
+						return
 					}
-				} catch (e) {
-					console.error('检查更新失败：', e)
+
+					const config = result.data
+
+					// 优先处理版本升级。出现升级窗口时，本次不再显示更新日志。
+					const updatePrompted = await this.promptUpdateIfNeeded(config)
+
+					if (!updatePrompted) {
+						await this.showUpdateLogIfNeeded(config)
+					}
+				} catch (error) {
+					console.error('初始化版本信息失败：', error)
 				}
 			},
 
-			showUpdateLog() {
-						const currentVersion = plus.runtime.version
-						const lastReadVersion = uni.getStorageSync('lastReadVersion')
+			parseVersion(version) {
+				const value = String(version || '')
+					.trim()
+					.replace(/^v/i, '')
 
-						// 如果当前版本和上次读过的版本不一样，说明是刚更新
-						if (currentVersion !== lastReadVersion) {
-							uniCloud.callFunction({
-								name: 'getAppVersion'
-							}).then(res => {
-								if (res.result.code === 200 && res.result.data.update_log) {
-									uni.showModal({
-										title: `欢迎更新 v${currentVersion}`,
-										content: res.result.data.update_log,
-										showCancel: false,
-										confirmText: '开始使用',
-										success: () => {
-											// 把当前版本存进本地，下次再打开就不弹了
-											uni.setStorageSync('lastReadVersion', currentVersion)
-										}
-									})
-								}
-							})
-						}
-					},
-			downloadAndInstall(url) {
-				// 检查是否是有效的直链（防止有人填了GitHub网页链接）
-				if (!url || !url.endsWith('.apk')) {
-					// 如果不是直链，走备用方案，跳转外部浏览器
+				if (!value) {
+					return []
+				}
+
+				return value.split('.').map(item => {
+					const number = parseInt(item, 10)
+					return Number.isFinite(number) ? number : 0
+				})
+			},
+
+			compareVersions(leftVersion, rightVersion) {
+				const left = this.parseVersion(leftVersion)
+				const right = this.parseVersion(rightVersion)
+
+				if (left.length === 0 || right.length === 0) {
+					return 0
+				}
+
+				const maxLength = Math.max(left.length, right.length)
+
+				for (let i = 0; i < maxLength; i++) {
+					const leftNumber = left[i] || 0
+					const rightNumber = right[i] || 0
+
+					if (leftNumber > rightNumber) return 1
+					if (leftNumber < rightNumber) return -1
+				}
+
+				return 0
+			},
+
+			async promptUpdateIfNeeded(config) {
+				const latestVersion = String(config.latest_version || '')
+				const currentVersion = plus.runtime.version
+
+				if (!latestVersion) {
+					return false
+				}
+
+				// 只有线上版本高于当前版本才提示，避免降级
+				if (this.compareVersions(latestVersion, currentVersion) <= 0) {
+					return false
+				}
+
+				const modalResult = await new Promise(resolve => {
 					uni.showModal({
-						title: '提示',
-						content: '即将跳转外部浏览器下载，下载完成后请手动安装。',
-						success: (res) => {
-							if (res.confirm) {
-								plus.runtime.openURL(url)
-							}
-						}
+						title: '发现新版本',
+						content: `最新版本 v${latestVersion} 已发布，是否立即更新？`,
+						confirmText: '立即更新',
+						cancelText: '稍后更新',
+						success: resolve,
+						fail: () => resolve({ confirm: false })
+					})
+				})
+
+				if (modalResult.confirm) {
+					await this.downloadAndInstall(config.download_url)
+				}
+
+				return true
+			},
+
+			async showUpdateLogIfNeeded(config) {
+				const currentVersion = plus.runtime.version
+				const lastReadVersion = uni.getStorageSync('lastReadVersion')
+
+				if (currentVersion === lastReadVersion) {
+					return
+				}
+
+				const updateLog = String(config.update_log || '').trim()
+
+				if (!updateLog) {
+					return
+				}
+
+				await new Promise(resolve => {
+					uni.showModal({
+						title: `欢迎更新 v${currentVersion}`,
+						content: updateLog,
+						showCancel: false,
+						confirmText: '开始使用',
+						success: () => {
+							uni.setStorageSync('lastReadVersion', currentVersion)
+							resolve()
+						},
+						fail: resolve
+					})
+				})
+			},
+
+			async downloadAndInstall(downloadUrl) {
+				let url = String(downloadUrl || '').trim()
+
+				if (!url) {
+					uni.showModal({
+						title: '更新失败',
+						content: '没有获取到安装包下载地址',
+						showCancel: false
 					})
 					return
 				}
 
-				// 使用内部下载逻辑
-				uni.showLoading({ title: '正在下载更新...', mask: true })
+				uni.showLoading({
+					title: '准备下载...',
+					mask: true
+				})
 
-				const downloadTask = uni.downloadFile({
-					url: url,
-					success: (downloadResult) => {
-						if (downloadResult.statusCode === 200) {
-							uni.hideLoading()
+				try {
+					// 兼容 app_config 中仍然填写 cloud:// 文件 ID 的情况
+					if (url.startsWith('cloud://')) {
+						const tempRes = await uniCloud.getTempFileURL({
+							fileList: [url]
+						})
 
-							// 调起系统安装
-							plus.runtime.install(
-								downloadResult.tempFilePath,
-								{ force: true }, // 强制覆盖安装
-								() => {
-									// 安装成功，重启App
-									uni.showToast({ title: '安装成功，即将重启', icon: 'none' })
-									setTimeout(() => {
-										plus.runtime.restart()
-									}, 1500)
-								},
-								(err) => {
-									uni.showToast({ title: '安装失败', icon: 'none' })
-									console.error('安装失败:', err)
-								}
-							)
+						const fileInfo = tempRes.fileList && tempRes.fileList[0]
+						const tempFileURL = fileInfo && fileInfo.tempFileURL
+
+						if (!tempFileURL) {
+							throw new Error('获取安装包下载地址失败')
 						}
-					},
-					fail: (err) => {
-						uni.hideLoading()
-						uni.showToast({ title: '下载失败，请检查网络', icon: 'none' })
-						console.error('下载失败:', err)
-					}
-				})
 
-				// 可选：你可以在控制台看看下载进度
-				downloadTask.onProgressUpdate((progressRes) => {
-					console.log('下载进度：', progressRes.progress + '%')
-				})
+						url = tempFileURL
+					}
+
+					if (
+						!url.startsWith('https://') &&
+						!url.startsWith('http://')
+					) {
+						throw new Error('安装包下载地址格式不正确')
+					}
+
+					uni.showLoading({
+						title: '正在下载更新...',
+						mask: true
+					})
+
+					const downloadResult = await new Promise((resolve, reject) => {
+						const downloadTask = uni.downloadFile({
+							url,
+							success: resolve,
+							fail: reject
+						})
+
+						downloadTask.onProgressUpdate(progressInfo => {
+							uni.showLoading({
+								title: `下载中 ${progressInfo.progress}%`,
+								mask: true
+							})
+						})
+					})
+
+					if (downloadResult.statusCode !== 200) {
+						throw new Error(`安装包下载失败，状态码 ${downloadResult.statusCode}`)
+					}
+
+					if (!downloadResult.tempFilePath) {
+						throw new Error('下载完成，但没有获取到安装包文件')
+					}
+
+					await new Promise((resolve, reject) => {
+						plus.runtime.install(
+							downloadResult.tempFilePath,
+							{ force: true },
+							resolve,
+							reject
+						)
+					})
+
+					uni.showToast({
+						title: '安装成功，即将重启',
+						icon: 'none'
+					})
+
+					setTimeout(() => {
+						plus.runtime.restart()
+					}, 1500)
+				} catch (error) {
+					console.error('安装更新失败：', error)
+
+					uni.showModal({
+						title: '更新失败',
+						content: error.message || '请检查网络后重试',
+						showCancel: false
+					})
+				} finally {
+					uni.hideLoading()
+				}
 			}
 		}
 	}

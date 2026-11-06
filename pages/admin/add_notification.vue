@@ -30,13 +30,6 @@
 		},
 		methods: {
 			async handleSubmit() {
-			if (uni.getStorageSync('isDemoMode')) {
-				return uni.showModal({
-					title: '访客模式已开启',
-					content: '演示期间无法真正发布作业或通知。',
-					showCancel: false
-				});
-			}
 				if (!this.content.trim()) {
 					uni.showToast({ title: '请输入通知内容', icon: 'none' })
 					return

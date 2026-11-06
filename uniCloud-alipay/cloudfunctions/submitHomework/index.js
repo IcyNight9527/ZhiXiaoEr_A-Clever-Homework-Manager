@@ -31,9 +31,6 @@ exports.main = async (event, context) => {
 			return { code: 415, msg: `格式错误！只允许 ${allowedExt.join('、')} 格式` }
 		}
 
-		console.log('提交参数：', { file_url, original_name, homework_id, student_id, group_id })
-		console.log('作业信息：', homework)
-
 		// 4. 自动查姓名
 		const userRes = await db.collection('users').where({ userId: student_id }).get()
 		if (userRes.data.length === 0) {
@@ -57,8 +54,10 @@ exports.main = async (event, context) => {
 
 		let result
 		if (checkRes.data.length > 0) {
-			// 更新（覆盖旧版本）
-			const oldId = checkRes.data[0]._id
+			const oldSubmission = checkRes.data[0]
+			const oldId = oldSubmission._id
+			const oldFileID = oldSubmission.file_url
+
 			await db.collection('submissions').doc(oldId).update({
 				file_url,
 				original_name,
@@ -67,12 +66,33 @@ exports.main = async (event, context) => {
 				submit_time: Date.now(),
 				status: 'success'
 			})
+
+			// 新旧文件不同，才删除旧文件
+			if (
+				oldFileID &&
+				oldFileID !== file_url &&
+				typeof oldFileID === 'string' &&
+				oldFileID.startsWith('cloud://')
+			) {
+				try {
+					await uniCloud.deleteFile({
+						fileList: [oldFileID]
+					})
+				} catch (error) {
+					console.warn('清理旧提交文件失败：', error)
+				}
+			}
+
 			return {
 				code: 200,
 				msg: '作业已重新提交成功！',
-				data: { id: oldId, renamed_file: renamedFile }
+				data: {
+					id: oldId,
+					renamed_file: renamedFile
+				}
 			}
-		} else {
+		}
+		else {
 			// 新增
 			result = await db.collection('submissions').add({
 				homework_id,

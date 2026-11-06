@@ -48,12 +48,18 @@
 		    }
 		},
 		{
+			"path": "pages/my/feedback",
+			"style": {
+				"navigationBarTitleText": "用户反馈"
+			}
+		},
+		{
 		    "path": "pages/admin/add_homework",
 		    "style": { "navigationBarTitleText": "发布作业" }
 		},
 		{
 		    "path": "pages/admin/add_notification",
-		    "style": { "navigationBarTitleText": "发通知" }
+		    "style": { "navigationBarTitleText": "发布通知" }
 		},
 		{
 		    "path": "pages/admin/submissions",

@@ -55,9 +55,16 @@
 		},
 		onLoad(options) {
 			this.group_id = options.group_id || ''
-			this.loadData()
 		},
 		onShow() {
+			if (!this.group_id) {
+				uni.showToast({
+					title: '缺少群组信息',
+					icon: 'none'
+				})
+				return
+			}
+
 			this.loadMembers()
 		},
 		methods: {
@@ -89,14 +96,6 @@
 
 			// 任命/撤销管理员
 			setAdmin(m, action) {
-				if (uni.getStorageSync('isDemoMode')) {
-							uni.showModal({
-								title: '访客模式已开启',
-								content: '演示期间不可修改群组信息。',
-								showCancel: false
-							});
-							return;
-						}
 				const actionText = action === 'add' ? '任命' : '撤销'
 				uni.showModal({
 					title: '确认' + actionText,
@@ -133,14 +132,6 @@
 
 			// 移出成员
 			removeMember(m) {
-				if (uni.getStorageSync('isDemoMode')) {
-							uni.showModal({
-								title: '访客模式已开启',
-								content: '演示期间不可修改群组信息。',
-								showCancel: false
-							});
-							return;
-						}
 				uni.showModal({
 					title: '⚠️ 移出成员',
 					content: `移出后，${m.name} 的所有提交记录也会被删除，确定吗？`,

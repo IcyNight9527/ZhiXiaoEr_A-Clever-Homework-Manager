@@ -8,9 +8,6 @@
 					{{ passText }}
 				</text>
 			</view>
-			<view class="demo-btn" @click="toggleDemoMode">
-				{{ isDemoMode ? '访客模式：开启' : '访客模式：关闭' }}
-			</view>
 			<!-- 加号保持不变 -->
 			<view class="top-add" @click="showAddMenu">＋</view>
 		</view>
@@ -60,10 +57,7 @@
 				pendingCount: 0,
 				loaded: false,
 				passLevel: 'none',
-				groupCount: 0,
-				passInfoLoaded: false,
-				isDemoMode: uni.getStorageSync('isDemoMode') === true
-
+				groupCount: 0
 			}
 		},
 		onShow() {
@@ -75,11 +69,6 @@
 			}
 
 			this.userInfo = info
-
-			// 每次回到主页，都重新同步并查询
-			this.isDemoMode = uni.getStorageSync('isDemoMode') === true
-			this.passInfoLoaded = false
-
 			this.loadAll()
 			this.loadPassInfo()
 		},
@@ -105,8 +94,6 @@
 				this.userInfo = info
 			},
 			async loadPassInfo() {
-				this.passInfoLoaded = false
-
 				const userId = this.userInfo.userId
 				if (!userId) return
 
@@ -140,24 +127,8 @@
 					this.passLevel = level
 					this.groupCount = result.data.group_count || 0
 					uni.setStorageSync('passLevel', level)
-
-					const canUseDemo =
-						level === 'high' || level === 'unlimited'
-
-					if (!canUseDemo) {
-						// 云端确认没有使用资格：清除残留的开启状态
-						uni.removeStorageSync('isDemoMode')
-						this.isDemoMode = false
-					} else {
-						// 有资格：保留实际的开关状态
-						this.isDemoMode =
-							uni.getStorageSync('isDemoMode') === true
-					}
-
-					this.passInfoLoaded = true
 				} catch (e) {
 					console.error('获取通行证失败：', e)
-					// 查询失败时，不改动原有访客模式状态
 				}
 			},
 
@@ -291,7 +262,7 @@
 
 			goToGroup(g) {
 				uni.navigateTo({
-					url: `/pages/group/group?id=${g._id}&name=${g.name}`
+					url: `/pages/group/group?id=${encodeURIComponent(g._id || '')}`
 				})
 			},
 			openPassModal() {
@@ -328,129 +299,7 @@
 								}
 							}
 						})
-					},
-			toggleDemoMode() {
-				// 1. 通行证信息尚未获取成功，不允许切换
-				if (!this.passInfoLoaded) {
-					uni.showToast({
-						title: '通行证信息未就绪，请稍后重试',
-						icon: 'none'
-					})
-
-					// 重新获取，成功后再点击按钮
-					this.loadPassInfo()
-					return
-				}
-
-				// 2. 检查通行证资格
-				const canUseDemo =
-					this.passLevel === 'high' ||
-					this.passLevel === 'unlimited'
-
-				if (!canUseDemo) {
-					uni.showModal({
-						title: '需要通行证',
-						content: '访客模式需要高级或无限通行证，请先获取对应通行证。',
-						showCancel: false
-					})
-					return
-				}
-
-				// 3. 检查登录状态
-				const userId = this.userInfo.userId
-				if (!userId) {
-					uni.reLaunch({ url: '/pages/login/login' })
-					return
-				}
-
-				// 4. 记录本次操作：开启或关闭
-				const targetMode = !this.isDemoMode
-
-				uni.showModal({
-					title: targetMode ? '进入访客模式' : '退出访客模式',
-					editable: true,
-					placeholderText: targetMode
-						? '请输入访客激活码'
-						: '请输入访客激活码以退出',
-					success: async (res) => {
-						// 点击取消，不改变当前状态
-						if (!res.confirm) return
-
-						const inputPwd = (res.content || '').trim()
-						if (!inputPwd) {
-							uni.showToast({
-								title: '请输入访客激活码',
-								icon: 'none'
-							})
-							return
-						}
-
-						uni.showLoading({ title: '校验中...' })
-
-						try {
-							const r = await uniCloud.callFunction({
-								name: 'checkDemoPassword',
-								data: {
-									user_id: userId,
-									password: inputPwd
-								}
-							})
-
-							// 校验期间如果切换了账号，不更新状态
-							const currentUser = uni.getStorageSync('userInfo')
-							if (!currentUser || currentUser.userId !== userId) {
-								return
-							}
-
-							// 校验期间若资格信息发生变化，也不切换
-							const stillQualified =
-								this.passLevel === 'high' ||
-								this.passLevel === 'unlimited'
-
-							if (!this.passInfoLoaded || !stillQualified) {
-								uni.showToast({
-									title: '通行证状态已变化，请重新操作',
-									icon: 'none'
-								})
-								return
-							}
-
-							const result = r.result
-							if (!result || result.code !== 200) {
-								uni.showToast({
-									title: result?.msg || '校验失败，请重试',
-									icon: 'none'
-								})
-								return
-							}
-
-							// 5. 激活码正确，才真正修改状态
-							if (targetMode) {
-								uni.setStorageSync('isDemoMode', true)
-							} else {
-								uni.removeStorageSync('isDemoMode')
-							}
-
-							this.isDemoMode = targetMode
-
-							uni.showToast({
-								title: targetMode
-									? '已进入访客模式'
-									: '已退出访客模式',
-								icon: 'success'
-							})
-						} catch (e) {
-							console.error('切换访客模式失败：', e)
-							uni.showToast({
-								title: '网络异常，请稍后重试',
-								icon: 'none'
-							})
-						} finally {
-							uni.hideLoading()
-						}
 					}
-				})
-			}
 		}
 	}
 </script>
@@ -585,17 +434,6 @@
 	    border-radius: 10px;
 	    color: #fff;
 	    margin-left: 8px;
-	}
-	.demo-btn {
-		/* 固定在名字和加号中间，或者你直接写 margin-left 调整位置 */
-		margin-left: 20px;
-		padding: 6px 12px;
-		background-color: #e6f0ff;
-		color: #007aff;
-		font-size: 14px;
-		font-weight: bold;
-		border-radius: 15px;
-		border: 1px solid #007aff;
 	}
 	.tag-none { background-color: #999; }
 	.tag-normal { background-color: #34c759; } /* 绿色 */

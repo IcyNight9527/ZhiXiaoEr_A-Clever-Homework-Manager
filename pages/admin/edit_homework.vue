@@ -14,11 +14,25 @@
 			<view class="form-item">
 				<text class="label">作业图片（最多5张）</text>
 				<view class="upload-list">
-					<view class="upload-item" v-for="(img, i) in formData.images" :key="i">
-						<image :src="img" mode="aspectFill" class="upload-img" @click="previewImg(i)" />
+					<view
+						class="upload-item"
+						v-for="(img, i) in formData.imagePreviewUrls"
+						:key="i"
+					>
+						<image
+							:src="img"
+							mode="aspectFill"
+							class="upload-img"
+							@click="previewImg(i)"
+						/>
 						<text class="upload-del" @click="removeImg(i)">×</text>
 					</view>
-					<view class="upload-add" v-if="formData.images.length < 5" @click="chooseImage">＋</view>
+
+					<view
+						class="upload-add"
+						v-if="formData.imagePreviewUrls.length < 5"
+						@click="chooseImage"
+					>＋</view>
 				</view>
 			</view>
 
@@ -130,6 +144,9 @@
 			return {
 				homework_id: '',
 				group_id: '',
+				originalDeadline: 0,
+				pendingImages: [],
+				pendingFile: null,
 				extGroups: {
 					pdf: { label: 'PDF', exts: ['pdf'] },
 					word: { label: 'WORD', exts: ['doc', 'docx'] },
@@ -150,6 +167,7 @@
 					timeType: '22:00',
 					customTime: '22:00',
 					images: [],
+					imagePreviewUrls: [],
 					file_url: '',
 					file_name: ''
 				}
@@ -174,11 +192,35 @@
 					}
 					this.formData.subject = hw.subject
 					this.formData.desc = hw.desc || ''
-					if (hw.images && hw.images.length > 0) {
-						const tempRes = await uniCloud.getTempFileURL({ fileList: hw.images })
-						this.formData.images = tempRes.fileList.map(item => item.tempFileURL)
-					} else {
-						this.formData.images = []
+					const savedImages = Array.isArray(hw.images) ? hw.images : []
+
+					// 只把 cloud:// 文件 ID 当作持久化数据
+					this.formData.images = savedImages.filter(item => {
+						return typeof item === 'string' && item.startsWith('cloud://')
+					})
+
+					this.formData.imagePreviewUrls = []
+
+					if (this.formData.images.length > 0) {
+						try {
+							const tempRes = await uniCloud.getTempFileURL({
+								fileList: this.formData.images
+							})
+
+							const urlMap = {}
+
+							;(tempRes.fileList || []).forEach(item => {
+								if (item.fileID && item.tempFileURL) {
+									urlMap[item.fileID] = item.tempFileURL
+								}
+							})
+
+							this.formData.imagePreviewUrls = this.formData.images.map(fileID => {
+								return urlMap[fileID] || ''
+							})
+						} catch (error) {
+							console.warn('获取作业图片预览地址失败：', error)
+						}
 					}
 					this.formData.file_url = hw.file_url || ''
 					this.formData.file_name = hw.file_name || ''
@@ -204,6 +246,7 @@
 						this.formData.customTime = timeStr
 					}
 					this.formData.deadline = hw.deadline
+					this.originalDeadline = Number(hw.deadline) || 0
 
 				} catch (e) {
 					console.error('加载作业失败：', e)
@@ -242,62 +285,198 @@
 				this.formData.customTime = e.detail.value
 			},
 
+			async uploadPendingAssets() {
+				// 上传待处理图片，每成功一张就移出待上传数组
+				while (this.pendingImages.length > 0) {
+					const image = this.pendingImages[0]
+
+					uni.showLoading({
+						title: '上传图片中...'
+					})
+
+					const uploadRes = await uniCloud.uploadFile({
+						filePath: image.path,
+						cloudPath: `homework_images/${Date.now()}_${Math.random()}.jpg`
+					})
+
+					if (!uploadRes.fileID) {
+						throw new Error('图片上传失败')
+					}
+
+					this.formData.images.push(uploadRes.fileID)
+					this.pendingImages.shift()
+				}
+
+				// 上传待处理附件
+				if (this.pendingFile) {
+					uni.showLoading({
+						title: '上传附件中...'
+					})
+
+					const uploadRes = await uniCloud.uploadFile({
+						filePath: this.pendingFile.path,
+						cloudPath: `homework_files/${Date.now()}_${this.pendingFile.name}`
+					})
+
+					if (!uploadRes.fileID) {
+						throw new Error('附件上传失败')
+					}
+
+					this.formData.file_url = uploadRes.fileID
+					this.formData.file_name = this.pendingFile.name
+					this.pendingFile = null
+				}
+			},
 			calcDeadline() {
-				let timeStr = this.formData.timeType === 'custom'
+				const timeStr = this.formData.timeType === 'custom'
 					? this.formData.customTime
 					: this.formData.timeType
-				const fullStr = `${this.formData.deadlineText} ${timeStr}:00`
-				return new Date(fullStr).getTime()
+
+				const dateParts = (this.formData.deadlineText || '')
+					.split('-')
+					.map(Number)
+
+				const timeParts = (timeStr || '')
+					.split(':')
+					.map(Number)
+
+				if (
+					dateParts.length !== 3 ||
+					timeParts.length !== 2
+				) {
+					return NaN
+				}
+
+				const [year, month, day] = dateParts
+				const [hour, minute] = timeParts
+
+				const isAllInteger = [
+					year,
+					month,
+					day,
+					hour,
+					minute
+				].every(Number.isInteger)
+
+				if (!isAllInteger) {
+					return NaN
+				}
+
+				const date = new Date(
+					year,
+					month - 1,
+					day,
+					hour,
+					minute,
+					0,
+					0
+				)
+
+				const isValidDate =
+					date.getFullYear() === year &&
+					date.getMonth() === month - 1 &&
+					date.getDate() === day &&
+					date.getHours() === hour &&
+					date.getMinutes() === minute
+
+				if (!isValidDate) {
+					return NaN
+				}
+
+				return date.getTime()
 			},
 			chooseImage() {
+				const remainingCount = 5 - this.formData.imagePreviewUrls.length
+
+				if (remainingCount <= 0) {
+					uni.showToast({
+						title: '最多上传5张图片',
+						icon: 'none'
+					})
+					return
+				}
+
 				uni.chooseImage({
-					count: 5 - this.formData.images.length,
-					success: async (res) => {
+					count: remainingCount,
+					success: (res) => {
 						for (const path of res.tempFilePaths) {
-							const uploadRes = await uniCloud.uploadFile({
-								filePath: path,
-								cloudPath: `homework_images/${Date.now()}_${Math.random()}.jpg`
+							this.pendingImages.push({
+								path
 							})
-							this.formData.images.push(uploadRes.fileID)
+							this.formData.imagePreviewUrls.push(path)
 						}
+					},
+					fail: () => {
+						uni.showToast({
+							title: '未选择图片',
+							icon: 'none'
+						})
 					}
 				})
 			},
-			removeImg(i) { this.formData.images.splice(i, 1) },
-			previewImg(i) { uni.previewImage({ urls: this.formData.images, current: i }) },
+
+			removeImg(index) {
+				if (index < this.formData.images.length) {
+					this.formData.images.splice(index, 1)
+					this.formData.imagePreviewUrls.splice(index, 1)
+					return
+				}
+
+				const pendingIndex = index - this.formData.images.length
+
+				if (pendingIndex >= 0 && pendingIndex < this.pendingImages.length) {
+					this.pendingImages.splice(pendingIndex, 1)
+				}
+
+				this.formData.imagePreviewUrls.splice(index, 1)
+			},
+
+			previewImg(index) {
+				const urls = this.formData.imagePreviewUrls.filter(Boolean)
+				const currentUrl = this.formData.imagePreviewUrls[index]
+
+				if (!currentUrl) return
+
+				uni.previewImage({
+					urls,
+					current: urls.indexOf(currentUrl)
+				})
+			},
 
 			chooseFile() {
 				// #ifdef H5
 				uni.chooseFile({
 					count: 1,
-					success: async (res) => {
+					success: (res) => {
 						const file = res.tempFiles[0]
-						const uploadRes = await uniCloud.uploadFile({
-							filePath: file.path,
-							cloudPath: `homework_files/${Date.now()}_${file.name}`
-						})
-						this.formData.file_url = uploadRes.fileID
+
+						if (!file) return
+
+						this.pendingFile = {
+							path: file.path,
+							name: file.name
+						}
+
 						this.formData.file_name = file.name
 					}
 				})
 				// #endif
+
 				// #ifndef H5
-				uni.showToast({ title: '请在网页端上传文件', icon: 'none' })
+				uni.showToast({
+					title: '请在电脑端上传文件',
+					icon: 'none'
+				})
 				// #endif
 			},
+
 			removeFile() {
+				this.pendingFile = null
 				this.formData.file_url = ''
 				this.formData.file_name = ''
 			},
 
 			async handleSubmit() {
-			if (uni.getStorageSync('isDemoMode')) {
-				return uni.showModal({
-					title: '访客模式已开启',
-					content: '演示期间无法真正发布作业或通知。',
-					showCancel: false
-				});
-			}
 				if (!this.formData.subject || !this.formData.desc) {
 					uni.showToast({ title: '科目和内容不能为空', icon: 'none' })
 					return
@@ -312,10 +491,37 @@
 				}
 
 				const deadline = this.calcDeadline()
+
+				if (!Number.isFinite(deadline)) {
+					uni.showToast({
+						title: '截止时间无效，请重新选择',
+						icon: 'none'
+					})
+					return
+				}
+
+				// 允许继续编辑已经截止的作业，但不能把截止时间改成另一个过去时间
+				const deadlineChanged =
+					Math.abs(deadline - this.originalDeadline) >= 60 * 1000
+
+				if (deadlineChanged && deadline <= Date.now()) {
+					uni.showToast({
+						title: '新的截止时间必须晚于当前时间',
+						icon: 'none'
+					})
+					return
+				}
+
 				const userInfo = uni.getStorageSync('userInfo')
 
 				uni.showLoading({ title: '保存中...' })
 				try {
+					await this.uploadPendingAssets()
+
+					uni.showLoading({
+						title: '保存中...'
+					})
+
 					const res = await uniCloud.callFunction({
 						name: 'updateHomework',
 						data: {
@@ -333,16 +539,29 @@
 							file_name: this.formData.file_name
 						}
 					})
-					uni.hideLoading()
-					if (res.result.code === 200) {
-						uni.showToast({ title: '保存成功！' })
-						setTimeout(() => uni.navigateBack(), 1000)
-					} else {
-						uni.showToast({ title: res.result.msg, icon: 'none' })
+
+					const result = res.result || {}
+
+					if (result.code !== 200) {
+						throw new Error(result.msg || '保存失败')
 					}
-				} catch (e) {
+
+					uni.showToast({
+						title: '保存成功！'
+					})
+
+					setTimeout(() => {
+						uni.navigateBack()
+					}, 1000)
+				} catch (error) {
+					console.error('保存作业失败：', error)
+
+					uni.showToast({
+						title: error.message || '网络异常',
+						icon: 'none'
+					})
+				} finally {
 					uni.hideLoading()
-					uni.showToast({ title: '网络异常', icon: 'none' })
 				}
 			}
 		}

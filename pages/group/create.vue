@@ -54,13 +54,6 @@
 		},
 		methods: {
 			async handleCreate() {
-			if (uni.getStorageSync('isDemoMode')) {
-				return uni.showModal({
-					title: '访客模式已开启',
-					content: '演示期间不可创建新群组。',
-					showCancel: false
-				});
-			}
 				if (!this.formData.name) {
 					uni.showToast({ title: '请输入群组名称', icon: 'none' })
 					return

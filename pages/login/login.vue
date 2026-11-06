@@ -10,22 +10,46 @@
 			</view>
 		</view>
 
-		<!-- 表单区域（居中，约占三分之一宽度） -->
+		<!-- 表单区域 -->
 		<view class="form-box">
 			<!-- 学号 -->
-			<input class="input" v-model="formData.userId" placeholder="请输入学号" />
+			<input
+				class="input"
+				v-model="formData.userId"
+				placeholder="请输入学号"
+			/>
 
 			<!-- 姓名（仅注册时显示） -->
-			<input v-if="isRegister" class="input" v-model="formData.name" placeholder="请输入姓名" />
+			<input
+				v-if="isRegister"
+				class="input"
+				v-model="formData.name"
+				placeholder="请输入姓名"
+			/>
 
 			<!-- 密码 -->
-			<input class="input" v-model="formData.password" type="password" placeholder="请输入密码" />
+			<input
+				class="input"
+				v-model="formData.password"
+				type="password"
+				placeholder="请输入密码"
+			/>
 
+			<!-- 记住密码 -->
 			<view class="remember-row" v-if="!isRegister">
-				<view class="checkbox" :class="{ checked: rememberMe }" @click="rememberMe = !rememberMe">
+				<view
+					class="checkbox"
+					:class="{ checked: rememberMe }"
+					@click="rememberMe = !rememberMe"
+				>
 					<text v-if="rememberMe">✓</text>
 				</view>
-				<text class="remember-text" @click="rememberMe = !rememberMe">记住密码</text>
+				<text
+					class="remember-text"
+					@click="rememberMe = !rememberMe"
+				>
+					记住密码
+				</text>
 			</view>
 
 			<!-- 主按钮 -->
@@ -33,15 +57,44 @@
 				{{ isRegister ? '注 册' : '登 录' }}
 			</button>
 
-			<!-- 切换链接 -->
+			<!-- 登录与注册切换 -->
 			<view class="toggle-link" @click="toggleMode">
-				<text>{{ isRegister ? '已有账号？点此登录' : '没有账号？点此注册' }}</text>
+				<text>
+					{{ isRegister ? '已有账号？点此登录' : '没有账号？点此注册' }}
+				</text>
 			</view>
 
-			<view class="tutorial-link" @click="goTutorial">
-			    <text>点击查看功能介绍</text>
-			</view>
+			<!-- 网页版入口和功能介绍 -->
+			<view class="secondary-actions">
+				<!-- App 端 -->
+				<!-- #ifdef APP-PLUS -->
+				<view
+					class="secondary-link"
+					@click="openWebVersion"
+				>
+					<text>在浏览器中打开网页版</text>
+				</view>
+				<!-- #endif -->
 
+				<!-- H5 端 -->
+				<!-- #ifdef H5 -->
+				<view
+					class="secondary-link"
+					@click="confirmDownloadAndroidApp"
+				>
+					<text>下载手机App</text>
+				</view>
+				<!-- #endif -->
+
+				<text class="secondary-divider">|</text>
+
+				<view
+					class="secondary-link"
+					@click="goTutorial"
+				>
+					<text>功能介绍</text>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
@@ -76,7 +129,171 @@
 			goTutorial() {
 			    uni.navigateTo({ url: '/pages/tutorial/tutorial' })
 			},
+			openWebVersion() {
+				// #ifdef APP-PLUS
+				plus.runtime.openURL(
+					'https://env-00jy6t6g3q4l-static.normal.cloudstatic.cn',
+					error => {
+						console.error('打开网页版失败：', error)
 
+						uni.showToast({
+							title: '无法打开浏览器，请稍后重试',
+							icon: 'none'
+						})
+					}
+				)
+				// #endif
+			},
+
+			confirmDownloadAndroidApp() {
+				// #ifdef H5
+				uni.showModal({
+					title: '下载手机 App',
+					content: '点击确认即可下载最新 APK，确认吗？',
+					confirmText: '确认',
+					cancelText: '取消',
+					success: (res) => {
+						if (res.confirm) {
+							this.downloadLatestAndroidApp()
+						}
+					}
+				})
+				// #endif
+			},
+
+			async downloadLatestAndroidApp() {
+				// #ifdef H5
+				const userAgent = navigator.userAgent.toLowerCase()
+
+				if (userAgent.includes('micromessenger')) {
+					uni.showModal({
+						title: '请使用浏览器打开',
+						content: '微信内无法直接下载 APK，请点击右上角菜单，选择“在浏览器打开”后再下载。',
+						showCancel: false
+					})
+					return
+				}
+
+				if (
+					userAgent.includes('iphone') ||
+					userAgent.includes('ipad') ||
+					userAgent.includes('ipod')
+				) {
+					uni.showModal({
+						title: '暂不支持 iOS',
+						content: '目前仅提供 Android APK 安装包。',
+						showCancel: false
+					})
+					return
+				}
+
+				uni.showLoading({
+					title: '获取安装包...',
+					mask: true
+				})
+
+				try {
+					const res = await uniCloud.callFunction({
+						name: 'getAppVersion'
+					})
+
+					const result = res.result || {}
+
+					if (result.code !== 200 || !result.data) {
+						throw new Error(result.msg || '获取安装包信息失败')
+					}
+
+					const appConfig = result.data
+					let downloadUrl = String(appConfig.download_url || '').trim()
+					const latestVersion = String(
+						appConfig.latest_version || 'latest'
+					)
+
+					if (!downloadUrl) {
+						throw new Error('暂未配置安装包下载地址')
+					}
+
+					// 兼容下载地址仍然保存为 cloud:// 文件ID的情况
+					if (downloadUrl.startsWith('cloud://')) {
+						const tempRes = await uniCloud.getTempFileURL({
+							fileList: [downloadUrl]
+						})
+
+						const fileInfo =
+							tempRes.fileList &&
+							tempRes.fileList[0]
+
+						downloadUrl =
+							fileInfo &&
+							fileInfo.tempFileURL
+
+						if (!downloadUrl) {
+							throw new Error('获取安装包下载链接失败')
+						}
+					}
+
+					if (
+						!downloadUrl.startsWith('https://') &&
+						!downloadUrl.startsWith('http://')
+					) {
+						throw new Error('安装包下载地址格式不正确')
+					}
+
+					uni.showLoading({
+						title: '正在下载 APK...',
+						mask: true
+					})
+
+					const response = await fetch(downloadUrl, {
+						cache: 'no-store'
+					})
+
+					if (!response.ok) {
+						throw new Error(
+							`安装包下载失败，状态码 ${response.status}`
+						)
+					}
+
+					const blob = await response.blob()
+
+					if (!blob || blob.size === 0) {
+						throw new Error('下载到的安装包内容为空')
+					}
+
+					const objectUrl = URL.createObjectURL(blob)
+					const safeVersion = latestVersion
+						.replace(/[^0-9A-Za-z._-]/g, '')
+						|| 'latest'
+
+					const link = document.createElement('a')
+					link.href = objectUrl
+					link.download = `智小二_v${safeVersion}.apk`
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
+
+					setTimeout(() => {
+						URL.revokeObjectURL(objectUrl)
+					}, 1000)
+
+					uni.showToast({
+						title: '安装包下载已开始',
+						icon: 'none',
+						duration: 2500
+					})
+				} catch (error) {
+					console.error('下载 APK 失败：', error)
+
+					uni.showModal({
+						title: '下载失败',
+						content: error.message || '请检查网络后重试',
+						showCancel: false
+					})
+				} finally {
+					uni.hideLoading()
+				}
+				// #endif
+			},
 			async handleSubmit() {
 				if (!this.formData.userId || !this.formData.password) {
 					uni.showToast({ title: '请填写学号和密码', icon: 'none' })
@@ -198,13 +415,6 @@
 		box-sizing: border-box;
 	}
 
-	.tutorial-link {
-	    text-align: center;
-	    margin-top: 15px;
-	    color: #007aff;
-	    font-size: 14px;
-	}
-
 	.input {
 		height: 55px;
 		border-bottom: 1px solid #eee;
@@ -247,8 +457,32 @@
 		background-color: #007aff;
 		border-color: #007aff;
 	}
+	.web-link {
+		text-align: center;
+		margin-top: 15px;
+		color: #007aff;
+		font-size: 14px;
+	}
 	.remember-text {
 		font-size: 13px;
 		color: #666;
+	}
+	.secondary-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 15px;
+		font-size: 14px;
+	}
+
+	.secondary-link {
+		color: #007aff;
+		white-space: nowrap;
+	}
+
+	.secondary-divider {
+		color: #d0d0d0;
+		font-size: 13px;
 	}
 </style>

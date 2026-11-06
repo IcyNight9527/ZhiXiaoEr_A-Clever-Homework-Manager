@@ -55,19 +55,51 @@ exports.main = async (event, context) => {
 
 		const groupId = res.id
 
-		// 7. 创建者自动加入 user_groups
-		await db.collection('user_groups').add({
-			user_id: admin_id,
-			group_id: groupId,
-			is_admin: true,
-			admin_in_group: admin_in_group === true,
-			joined_at: Date.now()
-		})
+		if (!groupId) {
+			throw new Error('群组创建成功，但没有返回群组ID')
+		}
+
+		try {
+			await db.collection('user_groups').add({
+				user_id: admin_id,
+				group_id: groupId,
+				is_admin: true,
+				admin_in_group: admin_in_group === true,
+				joined_at: Date.now()
+			})
+		} catch (memberError) {
+			console.error('创建者加入群组失败，开始回滚群组：', memberError)
+
+			let rollbackSuccess = false
+
+			try {
+				await db.collection('groups')
+					.doc(groupId)
+					.remove()
+
+				rollbackSuccess = true
+			} catch (rollbackError) {
+				console.error('群组回滚失败：', rollbackError)
+			}
+
+			return {
+				code: 500,
+				msg: rollbackSuccess
+					? '创建群组失败，请重试'
+					: '创建群组失败，请联系管理员处理',
+				data: {
+					rollback_success: rollbackSuccess
+				}
+			}
+		}
 
 		return {
 			code: 200,
 			msg: '群组创建成功！',
-			data: { group_id: groupId, group_code: group_code }
+			data: {
+				group_id: groupId,
+				group_code: group_code
+			}
 		}
 
 	} catch (e) {

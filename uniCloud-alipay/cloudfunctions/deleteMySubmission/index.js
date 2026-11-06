@@ -1,32 +1,77 @@
 const db = uniCloud.database()
 
+async function cleanupCloudFile(fileID) {
+	if (
+		typeof fileID !== 'string' ||
+		!fileID.startsWith('cloud://')
+	) {
+		return true
+	}
+
+	try {
+		await uniCloud.deleteFile({
+			fileList: [fileID]
+		})
+		return true
+	} catch (error) {
+		console.warn('删除提交文件失败：', error)
+		return false
+	}
+}
+
 exports.main = async (event, context) => {
 	const { submission_id, user_id } = event
 
 	if (!submission_id || !user_id) {
-		return { code: 400, msg: '参数不完整' }
+		return {
+			code: 400,
+			msg: '参数不完整'
+		}
 	}
 
 	try {
-		// 1. 查这条提交记录
-		const res = await db.collection('submissions').doc(submission_id).get()
+		const res = await db.collection('submissions')
+			.doc(submission_id)
+			.get()
+
 		if (res.data.length === 0) {
-			return { code: 404, msg: '提交记录不存在' }
+			return {
+				code: 404,
+				msg: '提交记录不存在'
+			}
 		}
 
-		const sub = res.data[0]
+		const submission = res.data[0]
 
-		// 2. 校验：只能删自己的
-		if (sub.student_id !== user_id) {
-			return { code: 403, msg: '只能删除自己的提交' }
+		if (submission.student_id !== user_id) {
+			return {
+				code: 403,
+				msg: '只能删除自己的提交'
+			}
 		}
 
-		// 3. 删除记录
-		await db.collection('submissions').doc(submission_id).remove()
+		// 先删除数据库记录，确保用户能够正常完成删除操作
+		await db.collection('submissions')
+			.doc(submission_id)
+			.remove()
 
-		return { code: 200, msg: '已删除提交' }
+		// 再进行云文件清理
+		const fileCleanupSuccess = await cleanupCloudFile(
+			submission.file_url
+		)
 
-	} catch (e) {
-		return { code: 500, msg: '服务器内部错误', error: e.message }
+		return {
+			code: 200,
+			msg: '已删除提交',
+			data: {
+				file_cleanup_success: fileCleanupSuccess
+			}
+		}
+	} catch (error) {
+		console.error('删除提交失败：', error)
+		return {
+			code: 500,
+			msg: '服务器内部错误'
+		}
 	}
 }

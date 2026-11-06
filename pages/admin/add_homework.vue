@@ -12,13 +12,27 @@
 			</view>
 
 			<view class="form-item">
-				<text class="label">作业图片（最多5张，若无法显示请在作业发布后重新上传）</text>
+				<text class="label">作业图片（最多5张）</text>
 				<view class="upload-list">
-					<view class="upload-item" v-for="(img, i) in formData.images" :key="i">
-						<image :src="img" mode="aspectFill" class="upload-img" @click="previewImg(i)" />
+					<view
+						class="upload-item"
+						v-for="(img, i) in formData.imagePreviewUrls"
+						:key="i"
+					>
+						<image
+							:src="img"
+							mode="aspectFill"
+							class="upload-img"
+							@click="previewImg(i)"
+						/>
 						<text class="upload-del" @click="removeImg(i)">×</text>
 					</view>
-					<view class="upload-add" v-if="formData.images.length < 5" @click="chooseImage">＋</view>
+
+					<view
+						class="upload-add"
+						v-if="formData.imagePreviewUrls.length < 5"
+						@click="chooseImage"
+					>＋</view>
 				</view>
 			</view>
 
@@ -128,6 +142,8 @@
 		data() {
 			return {
 				group_id: '',
+				pendingImages: [],
+				pendingFile: null,
 				extGroups: {
 					pdf: { label: 'PDF', exts: ['pdf'] },
 					word: { label: 'WORD', exts: ['doc', 'docx'] },
@@ -148,6 +164,7 @@
 					timeType: '22:00',
 					customTime: '22:00',
 					images: [],
+					imagePreviewUrls: [],
 					file_url: '',
 					file_name: ''
 				}
@@ -189,88 +206,262 @@
 			},
 
 			chooseImage() {
+				const remainingCount = 5 - this.formData.imagePreviewUrls.length
+
+				if (remainingCount <= 0) {
+					uni.showToast({
+						title: '最多上传5张图片',
+						icon: 'none'
+					})
+					return
+				}
+
 				uni.chooseImage({
-					count: 5 - this.formData.images.length,
-					success: async (res) => {
+					count: remainingCount,
+					success: (res) => {
 						for (const path of res.tempFilePaths) {
-							const uploadRes = await uniCloud.uploadFile({
-								filePath: path,
-								cloudPath: `homework_images/${Date.now()}_${Math.random()}.jpg`
+							this.pendingImages.push({
+								path
 							})
-							this.formData.images.push(uploadRes.fileID)
+							this.formData.imagePreviewUrls.push(path)
 						}
+					},
+					fail: () => {
+						uni.showToast({
+							title: '未选择图片',
+							icon: 'none'
+						})
 					}
 				})
 			},
-			removeImg(i) { this.formData.images.splice(i, 1) },
-			previewImg(i) { uni.previewImage({ urls: this.formData.images, current: i }) },
+
+			removeImg(index) {
+				if (index < this.formData.images.length) {
+					this.formData.images.splice(index, 1)
+					this.formData.imagePreviewUrls.splice(index, 1)
+					return
+				}
+
+				const pendingIndex = index - this.formData.images.length
+
+				if (pendingIndex >= 0 && pendingIndex < this.pendingImages.length) {
+					this.pendingImages.splice(pendingIndex, 1)
+				}
+
+				this.formData.imagePreviewUrls.splice(index, 1)
+			},
+
+			previewImg(index) {
+				const urls = this.formData.imagePreviewUrls.filter(Boolean)
+				const currentUrl = this.formData.imagePreviewUrls[index]
+
+				if (!currentUrl) return
+
+				uni.previewImage({
+					urls,
+					current: urls.indexOf(currentUrl)
+				})
+			},
 
 			chooseFile() {
 				// #ifdef H5
 				uni.chooseFile({
 					count: 1,
-					success: async (res) => {
+					success: (res) => {
 						const file = res.tempFiles[0]
-						const uploadRes = await uniCloud.uploadFile({
-							filePath: file.path,
-							cloudPath: `homework_files/${Date.now()}_${file.name}`
-						})
-						this.formData.file_url = uploadRes.fileID
+
+						if (!file) return
+
+						this.pendingFile = {
+							path: file.path,
+							name: file.name
+						}
+
 						this.formData.file_name = file.name
 					}
 				})
 				// #endif
+
 				// #ifndef H5
-				uni.showToast({ title: '请在网页端上传文件', icon: 'none' })
+				uni.showToast({
+					title: '请在电脑端上传文件',
+					icon: 'none'
+				})
 				// #endif
 			},
 			removeFile() {
+				this.pendingFile = null
 				this.formData.file_url = ''
 				this.formData.file_name = ''
 			},
-			calcDeadline() {
-				let timeStr = ''
-				if (this.formData.timeType === 'custom') {
-					timeStr = this.formData.customTime   // 比如 "22:30"
-				} else {
-					timeStr = this.formData.timeType    // "21:00" 或 "22:00"
+			async uploadPendingAssets() {
+				// 上传待处理图片，每成功一张就移出待上传数组
+				while (this.pendingImages.length > 0) {
+					const image = this.pendingImages[0]
+
+					uni.showLoading({
+						title: '上传图片中...'
+					})
+
+					const uploadRes = await uniCloud.uploadFile({
+						filePath: image.path,
+						cloudPath: `homework_images/${Date.now()}_${Math.random()}.jpg`
+					})
+
+					if (!uploadRes.fileID) {
+						throw new Error('图片上传失败')
+					}
+
+					this.formData.images.push(uploadRes.fileID)
+					this.pendingImages.shift()
 				}
-				// 拼接："2026-09-17 22:00:00"
-				const fullStr = `${this.formData.deadlineText} ${timeStr}:00`
-				return new Date(fullStr).getTime()
+
+				// 上传待处理附件
+				if (this.pendingFile) {
+					uni.showLoading({
+						title: '上传附件中...'
+					})
+
+					const uploadRes = await uniCloud.uploadFile({
+						filePath: this.pendingFile.path,
+						cloudPath: `homework_files/${Date.now()}_${this.pendingFile.name}`
+					})
+
+					if (!uploadRes.fileID) {
+						throw new Error('附件上传失败')
+					}
+
+					this.formData.file_url = uploadRes.fileID
+					this.formData.file_name = this.pendingFile.name
+					this.pendingFile = null
+				}
+			},
+			calcDeadline() {
+				const timeStr = this.formData.timeType === 'custom'
+					? this.formData.customTime
+					: this.formData.timeType
+
+				const dateParts = (this.formData.deadlineText || '')
+					.split('-')
+					.map(Number)
+
+				const timeParts = (timeStr || '')
+					.split(':')
+					.map(Number)
+
+				if (
+					dateParts.length !== 3 ||
+					timeParts.length !== 2
+				) {
+					return NaN
+				}
+
+				const [year, month, day] = dateParts
+				const [hour, minute] = timeParts
+
+				const isAllInteger = [
+					year,
+					month,
+					day,
+					hour,
+					minute
+				].every(Number.isInteger)
+
+				if (!isAllInteger) {
+					return NaN
+				}
+
+				const date = new Date(
+					year,
+					month - 1,
+					day,
+					hour,
+					minute,
+					0,
+					0
+				)
+
+				// 防止 2026-02-30 这类非法日期被浏览器自动纠正
+				const isValidDate =
+					date.getFullYear() === year &&
+					date.getMonth() === month - 1 &&
+					date.getDate() === day &&
+					date.getHours() === hour &&
+					date.getMinutes() === minute
+
+				if (!isValidDate) {
+					return NaN
+				}
+
+				return date.getTime()
 			},
 
 			async handleSubmit() {
-			if (uni.getStorageSync('isDemoMode')) {
-				return uni.showModal({
-					title: '访客模式已开启',
-					content: '演示期间无法真正发布作业或通知。',
-					showCancel: false
-				});
-			}
-				// 基础校验
 				if (!this.formData.subject) {
-					uni.showToast({ title: '请输入科目', icon: 'none' })
+					uni.showToast({
+						title: '请输入科目',
+						icon: 'none'
+					})
 					return
 				}
+
+				if (!this.formData.desc) {
+					uni.showToast({
+						title: '请输入作业内容',
+						icon: 'none'
+					})
+					return
+				}
+
 				if (!this.formData.deadlineText) {
-					uni.showToast({ title: '请选择截止日期', icon: 'none' })
+					uni.showToast({
+						title: '请选择截止日期',
+						icon: 'none'
+					})
 					return
 				}
-				if (this.formData.timeType === 'custom' && !this.formData.customTime) {
-					uni.showToast({ title: '请选择自定义时间', icon: 'none' })
+
+				if (
+					this.formData.timeType === 'custom' &&
+					!this.formData.customTime
+				) {
+					uni.showToast({
+						title: '请选择自定义时间',
+						icon: 'none'
+					})
 					return
 				}
 
 				const deadline = this.calcDeadline()
 
-				uni.showLoading({ title: '发布中...' })
+				if (!Number.isFinite(deadline)) {
+					uni.showToast({
+						title: '截止时间无效，请重新选择',
+						icon: 'none'
+					})
+					return
+				}
+
+				if (deadline <= Date.now()) {
+					uni.showToast({
+						title: '截止时间必须晚于当前时间',
+						icon: 'none'
+					})
+					return
+				}
+
 				try {
+					// 到这一步才开始真正上传新选择的图片和附件
+					await this.uploadPendingAssets()
+
+					uni.showLoading({
+						title: '发布中...'
+					})
+
 					const res = await uniCloud.callFunction({
 						name: 'addHomework',
 						data: {
 							subject: this.formData.subject,
-							title: this.formData.title,
 							desc: this.formData.desc,
 							allowed_ext: this.formData.allowed_ext,
 							deadline: deadline,
@@ -282,17 +473,29 @@
 							file_name: this.formData.file_name
 						}
 					})
-					uni.hideLoading()
 
-					if (res.result.code === 200) {
-						uni.showToast({ title: '发布成功！' })
-						setTimeout(() => uni.navigateBack(), 1000)
-					} else {
-						uni.showToast({ title: res.result.msg, icon: 'none' })
+					const result = res.result || {}
+
+					if (result.code !== 200) {
+						throw new Error(result.msg || '发布失败')
 					}
-				} catch (e) {
+
+					uni.showToast({
+						title: '发布成功！'
+					})
+
+					setTimeout(() => {
+						uni.navigateBack()
+					}, 1000)
+				} catch (error) {
+					console.error('发布作业失败：', error)
+
+					uni.showToast({
+						title: error.message || '网络异常',
+						icon: 'none'
+					})
+				} finally {
 					uni.hideLoading()
-					uni.showToast({ title: '网络异常', icon: 'none' })
 				}
 			}
 		}

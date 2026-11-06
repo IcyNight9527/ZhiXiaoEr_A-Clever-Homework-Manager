@@ -1,0 +1,67 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id",
+    "user_name",
+    "category",
+    "content",
+    "status",
+    "day_key",
+    "created_at"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "反馈ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "提交反馈的用户学号"
+    },
+    "user_name": {
+      "bsonType": "string",
+      "description": "提交反馈时的用户姓名"
+    },
+    "category": {
+      "bsonType": "string",
+      "description": "问题分类：账号与密码、通行证相关、bug上报、其它"
+    },
+    "content": {
+      "bsonType": "string",
+      "description": "用户反馈内容"
+    },
+    "status": {
+      "bsonType": "string",
+      "description": "处理状态：pending 或 replied"
+    },
+    "reply": {
+      "bsonType": "string",
+      "description": "开发者回复内容"
+    },
+    "replied_at": {
+      "bsonType": "double",
+      "description": "开发者回复时间毫秒时间戳"
+    },
+    "day_key": {
+      "bsonType": "string",
+      "description": "提交日期，例如 2026-11-06"
+    },
+    "created_at": {
+      "bsonType": "double",
+      "description": "提交时间毫秒时间戳"
+    },
+    "client_version": {
+      "bsonType": "string",
+      "description": "反馈时的客户端版本"
+    },
+    "platform": {
+      "bsonType": "string",
+      "description": "App 或 H5"
+    }
+  }
+}

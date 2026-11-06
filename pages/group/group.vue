@@ -33,7 +33,7 @@
 		<!-- 管理员专属按钮 -->
 		<view class="admin-actions" v-if="myIdentity.is_admin">
 			<button class="admin-action-btn" @click="goAddHomework">发布作业</button>
-			<button class="admin-action-btn" @click="goAddNotification">发通知</button>
+			<button class="admin-action-btn" @click="goAddNotification">发布通知</button>
 		</view>
 
 		<!-- 通知区 -->
@@ -265,14 +265,6 @@
 				return count
 			},
 			editGroupName() {
-				if (uni.getStorageSync('isDemoMode')) {
-							uni.showModal({
-								title: '访客模式已开启',
-								content: '演示期间不可修改群组信息。',
-								showCancel: false
-							});
-							return;
-						}
 				uni.showModal({
 					title: '修改群组名',
 					editable: true,
@@ -376,7 +368,7 @@
 
 			goEditHomework(hw) {
 				uni.navigateTo({
-					url: `/pages/admin/edit_homework?homework_id=${hw._id}&group_id=${this.group_id}`
+					url: `/pages/admin/edit_homework?homework_id=${encodeURIComponent(hw._id || '')}&group_id=${encodeURIComponent(this.group_id || '')}`
 				})
 			},
 
@@ -389,15 +381,28 @@
 				return
 				// #endif
 
-				// H5 端：正常跳转
+				const query = [
+					`id=${encodeURIComponent(hw._id || '')}`,
+					`subject=${encodeURIComponent(hw.subject || '')}`,
+					`desc=${encodeURIComponent(hw.desc || '')}`,
+					`ext=${encodeURIComponent((hw.allowed_ext || []).join(','))}`,
+					`group_id=${encodeURIComponent(this.group_id || '')}`
+				].join('&')
+
 				uni.navigateTo({
-						url: `/pages/submit/submit?id=${hw._id}&subject=${hw.subject}&desc=${hw.desc}&ext=${hw.allowed_ext.join(',')}&group_id=${this.group_id}`
-					})
+					url: `/pages/submit/submit?${query}`
+				})
 			},
 
 			goToSubmissions(hw) {
+				const query = [
+					`homework_id=${encodeURIComponent(hw._id || '')}`,
+					`group_id=${encodeURIComponent(this.group_id || '')}`,
+					`title=${encodeURIComponent(hw.title || hw.subject || '提交情况')}`
+				].join('&')
+
 				uni.navigateTo({
-					url: `/pages/admin/submissions?homework_id=${hw._id}&group_id=${this.group_id}&title=${hw.title}`
+					url: `/pages/admin/submissions?${query}`
 				})
 			},
 
@@ -415,13 +420,6 @@
 
 
 			deleteHw(id) {
-				if (uni.getStorageSync('isDemoMode')) {
-							return uni.showModal({
-								title: '访客模式已开启',
-								content: '演示期间不可删除任何数据哦~',
-								showCancel: false
-							});
-						}
 				uni.showModal({
 					title: '确认删除',
 					content: '删除作业会同时删除所有提交记录，确定吗？',
@@ -452,13 +450,6 @@
 			},
 
 			deleteNotice(id) {
-				if (uni.getStorageSync('isDemoMode')) {
-					return uni.showModal({
-						title: '访客模式已开启',
-						content: '演示期间不可删除任何数据哦~',
-						showCancel: false
-					});
-				}
 				uni.showModal({
 					title: '确认删除',
 					content: '确定要删除这条通知吗？',
@@ -482,13 +473,6 @@
 			},
 
 			dismissGroup() {
-			if (uni.getStorageSync('isDemoMode')) {
-				return uni.showModal({
-					title: '访客模式已开启',
-					content: '演示期间不可删除任何数据哦~',
-					showCancel: false
-				});
-			}
 				uni.showModal({
 					title: '⚠️ 解散群组',
 					content: '解散后，所有作业、通知、提交记录都会被删除，且无法恢复。确定吗？',
@@ -589,12 +573,14 @@
 	}
 
 	.info-card {
+		width: 100%;
 		background-color: #fff;
 		border-radius: 12px;
 		padding: 20px;
 		margin-bottom: 20px;
 		box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 		text-align: center;
+		box-sizing: border-box;
 	}
 	.info-name {
 		font-size: 24px;
@@ -669,20 +655,38 @@
 		border-radius: 20px;
 	}
 
-	.admin-actions { display: flex; margin-bottom: 20px; }
+	.admin-actions {
+		display: flex;
+		width: 100%;
+		margin-bottom: 20px;
+		gap: 10px;
+		box-sizing: border-box;
+	}
 
-	.notice-title, .board-title {
+	.notice-title,
+	.board-title {
+		display: block;
+		width: 100%;
+		text-align: left;
 		font-size: 16px;
 		font-weight: bold;
 		color: #333;
 		margin-bottom: 12px;
+		box-sizing: border-box;
+	}
+	.homework-list {
+		display: block;
+		width: 100%;
 	}
 	.notice-section {
+		display: block;
+		width: 100%;
 		background-color: #fff8e1;
 		border-left: 4px solid #ffb300;
 		padding: 15px;
 		border-radius: 8px;
 		margin-bottom: 25px;
+		box-sizing: border-box;
 	}
 	.notice-item {
 		display: flex;
@@ -703,6 +707,7 @@
 	}
 
 	.empty-box {
+		width: 100%;
 		background-color: #fff;
 		border-radius: 10px;
 		padding: 30px;
@@ -710,14 +715,17 @@
 		color: #999;
 		font-size: 14px;
 		margin-bottom: 25px;
+		box-sizing: border-box;
 	}
-
 	.homework-card {
+		display: block;
+		width: 100%;
 		background-color: #fff;
 		border-radius: 12px;
 		padding: 18px;
 		margin-bottom: 15px;
 		box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+		box-sizing: border-box;
 	}
 	.card-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
 	.subject { font-size: 14px; color: #007aff; font-weight: bold; }
@@ -731,12 +739,19 @@
 	.deadline-expired { color: #ff3b30; font-weight: bold; }
 
 	.admin-action-btn {
-		flex: 1;
+		flex: 1 1 0;
+		width: auto;
+		min-width: 0;
+		height: 46px;
+		line-height: 46px;
+		margin: 0;
+		padding: 0 12px;
 		background-color: #007aff;
 		color: #fff;
 		font-size: 14px;
 		border-radius: 20px;
-		margin-right: 10px;
+		white-space: nowrap;
+		box-sizing: border-box;
 	}
 	.action-btn {
 		display: inline-block;
